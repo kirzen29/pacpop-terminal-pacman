@@ -1,0 +1,42 @@
+#include "ghost_ai.h"
+#include <stdlib.h>
+
+Direction choose_ghost_direction(const Ghost* g, const SpatialMatrix* mat) {
+    int dx[] = { 0,  0, -1, 0, 1 };
+    int dy[] = { 0, -1,  0, 1, 0 };
+    Direction opp_dir[] = { DIR_NONE, DIR_DOWN, DIR_RIGHT, DIR_UP, DIR_LEFT };
+
+    Direction valid_directions[4];
+    int valid_count = 0;
+
+    /* Check all 4 neighbouring cardinal directions */
+    for (int d = 1; d <= 4; d++) {
+        /* Prohibit immediate 180-degree turnaround unless dead-ended */
+        if (d == opp_dir[g->current_dir]) continue;
+
+        int next_x = g->x + dx[d];
+        int next_y = g->y + dy[d];
+
+        /* Portal wrap-around */
+        if (next_x < 0) next_x = MAZE_COLS - 1;
+        if (next_x >= MAZE_COLS) next_x = 0;
+
+        if (is_tile_walkable(mat, next_y, next_x)) {
+            valid_directions[valid_count++] = (Direction)d;
+        }
+    }
+
+    if (valid_count > 0) {
+        /* 60% bias to continue straight if current corridor remains open */
+        int straight_x = g->x + dx[g->current_dir];
+        int straight_y = g->y + dy[g->current_dir];
+        if (straight_x >= 0 && straight_x < MAZE_COLS && is_tile_walkable(mat, straight_y, straight_x)) {
+            if ((rand() % 100) < 60) {
+                return g->current_dir;
+            }
+        }
+        return valid_directions[rand() % valid_count];
+    }
+
+    return opp_dir[g->current_dir];
+}
